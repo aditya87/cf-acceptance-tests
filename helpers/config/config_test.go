@@ -112,7 +112,6 @@ type allConfig struct {
 var tmpFilePath string
 var err error
 var errors Errors
-var requiredCfg requiredConfig
 var testCfg testConfig
 var originalConfig string
 
@@ -313,6 +312,23 @@ var _ = Describe("Config", func() {
 			Expect(config.AsyncServiceOperationTimeoutDuration()).To(Equal(90 * time.Minute))
 			Expect(config.DetectTimeoutDuration()).To(Equal(100 * time.Minute))
 			Expect(config.SleepTimeoutDuration()).To(Equal(101 * time.Second))
+		})
+	})
+
+	Describe("error aggregation", func() {
+		BeforeEach(func() {
+			testCfg.ApiEndpoint = ptrToString("invalid-domain.asdf")
+			testCfg.AdminUser = nil
+		})
+
+		It("aggregates errors for different fields", func() {
+			config, err := cfg.NewCatsConfig(tmpFilePath)
+
+			Expect(config).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("Invalid configuration for 'api_endpoint' <invalid-domain.asdf>"))
+			Expect(err.Error()).To(ContainSubstring("'admin_password' must not be null"))
+			Expect(err.Error()).To(ContainSubstring("'admin_user' must not be null"))
 		})
 	})
 
